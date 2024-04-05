@@ -5,7 +5,7 @@ use tokio::sync::mpsc::error::SendError;
 use tokio::sync::{mpsc::channel, Mutex};
 
 use crate::index::FaissIndex;
-use crate::index::IndexError;
+
 use crate::index::IndexSearchError;
 use crate::index::SearchService;
 
@@ -29,7 +29,6 @@ pub(crate) struct IndexEngine {
 pub(crate) enum IndexEngineError {
     QueueError(EnqueueError),
     IndexSearchError(IndexSearchError),
-    IndexError(IndexError),
     SendError(SendError<Vec<i64>>),
     NoNeighbors,
 }
@@ -42,7 +41,6 @@ impl Display for IndexEngineError {
             IndexEngineError::QueueError(e) => write!(f, "{e:?}"),
             IndexEngineError::NoNeighbors => write!(f, "IndexEngine: NoNeighbors"),
             IndexEngineError::IndexSearchError(_) => todo!(),
-            IndexEngineError::IndexError(_) => todo!(),
             IndexEngineError::SendError(_) => todo!(),
         }
     }
@@ -60,6 +58,7 @@ impl IndexEngine {
                     .await
                     .search(&arguments.embedding, arguments.neighbors)
                     .map_err(IndexEngineError::IndexSearchError)?;
+
                 arguments
                     .sender
                     .send(neighbors)

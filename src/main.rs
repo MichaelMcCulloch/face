@@ -21,12 +21,6 @@ struct Args {
     pub(crate) port: u16,
 }
 
-pub(crate) struct Config {
-    pub(crate) index_path: PathBuf,
-    pub(crate) host: String,
-    pub(crate) port: u16,
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let args = Args::parse();
