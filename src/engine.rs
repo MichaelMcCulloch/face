@@ -69,9 +69,7 @@ impl IndexEngine {
         });
         Self { index_queue: tx }
     }
-}
 
-impl IndexEngine {
     pub(crate) async fn query(
         &self,
         embedding: Vec<f32>,
