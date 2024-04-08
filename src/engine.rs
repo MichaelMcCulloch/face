@@ -40,8 +40,8 @@ impl Display for IndexEngineError {
         match self {
             IndexEngineError::QueueError(e) => write!(f, "{e:?}"),
             IndexEngineError::NoNeighbors => write!(f, "IndexEngine: NoNeighbors"),
-            IndexEngineError::IndexSearchError(_) => todo!(),
-            IndexEngineError::SendError(_) => todo!(),
+            IndexEngineError::IndexSearchError(e) => write!(f, "{e:?}"),
+            IndexEngineError::SendError(e) => write!(f, "{e:?}"),
         }
     }
 }

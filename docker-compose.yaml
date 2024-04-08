@@ -1,0 +1,34 @@
+x-base_service: &base_service
+  stop_signal: SIGTERM
+  restart: always
+  tty: true
+  stdin_open: true
+  ipc: host
+
+x-base_service_nvidia: &base_service_nvidia
+  <<: *base_service
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            device_ids: ["0"]
+            capabilities: [gpu]
+
+x-base_service_index: &base_index
+  ports:
+    - "6947:6947"
+  volumes:
+    - /home/michael/Documents/WIKIDUMPS/20240220/index/thenlper/gte-small:/db
+
+services:
+  index:
+    <<:
+      - *base_service_nvidia
+      - *base_index
+    environment:
+      RUST_LOG: info
+    build:
+      dockerfile: Dockerfile
+      context: .
+    entrypoint: [face, --index-path, /db/wikipedia_index.faiss]
