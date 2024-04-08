@@ -35,7 +35,7 @@ impl FaissIndex {
 impl SearchService for FaissIndex {
     type E = IndexSearchError;
 
-    fn search(&mut self, query: &Vec<f32>, neighbors: usize) -> Result<Vec<i64>, Self::E> {
+    fn search(&mut self, query: &[f32], neighbors: usize) -> Result<Vec<i64>, Self::E> {
         let start = Instant::now();
         let rs = self
             .index

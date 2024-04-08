@@ -14,7 +14,6 @@ pub enum IndexError {
 
 #[derive(Debug)]
 pub enum IndexSearchError {
-    IncorrectDimensions,
     IndexSearchError(FsError),
 }
 
@@ -38,9 +37,6 @@ impl Display for IndexError {
 impl Display for IndexSearchError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            IndexSearchError::IncorrectDimensions => {
-                write!(f, "SearchService: Incorrect dimensions for search")
-            }
             IndexSearchError::IndexSearchError(err) => {
                 write!(f, "SearchService: {}", err)
             }
