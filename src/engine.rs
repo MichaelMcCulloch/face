@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use std::time::Instant;
 
 use actix_web::rt;
 use tokio::sync::mpsc::error::SendError;
@@ -53,11 +54,13 @@ impl IndexEngine {
         let (mut rx, tx) = jiffy::async_queue::<IndexArguments>();
         rt::spawn(async move {
             while let Ok(arguments) = rx.dequeue().await {
-                let neighbors = mutex
-                    .lock()
-                    .await
+                let faiss_index = &mut mutex.lock().await;
+
+                let start = Instant::now();
+                let neighbors = faiss_index
                     .search(&arguments.embedding, arguments.neighbors)
                     .map_err(IndexEngineError::IndexSearchError)?;
+                log::info!("{}", start.elapsed().as_millis());
 
                 arguments
                     .sender
