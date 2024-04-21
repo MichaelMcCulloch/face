@@ -37,7 +37,7 @@ RUN  \
 FROM nvidia/cuda:12.3.2-runtime-ubuntu22.04
 ARG TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,rw apt-get update  && \
-    apt-get install -y ca-certificates pkg-config libssl-dev liblapack-dev libblas-dev libgomp1 && \
+    apt-get install -y curl ca-certificates pkg-config libssl-dev liblapack-dev libblas-dev libgomp1 && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/face/build/bin/face /usr/local/bin/face
 
