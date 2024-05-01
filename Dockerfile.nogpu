@@ -5,15 +5,15 @@ RUN apt-get update
 RUN apt-get install -y curl wget gcc g++ ca-certificates cmake software-properties-common pkg-config libssl-dev liblapack-dev libblas-dev 
 RUN rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update 
-RUN apt remove -y --purge --auto-remove cmake
+# RUN apt-get update 
+# RUN apt remove -y --purge --auto-remove cmake
 
-RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null 
-RUN add-apt-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" 
-RUN apt update 
-RUN apt install -y kitware-archive-keyring 
-RUN rm /etc/apt/trusted.gpg.d/kitware.gpg 
-RUN apt update 
+# RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null 
+# RUN add-apt-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" 
+# RUN apt update 
+# RUN apt install -y kitware-archive-keyring 
+# RUN rm /etc/apt/trusted.gpg.d/kitware.gpg 
+# RUN apt update 
 RUN apt install -y cmake 
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
