@@ -12,7 +12,7 @@ clap = { version = "4.5.4", features = ["derive"] }
 env_logger = "0.11.3"
 faiss = { git = "https://github.com/MichaelMcCulloch/faiss-rs.git", tag = "master-avx", features = [
     "static",
-    "gpu",
+   # "gpu",
 ] }
 log = "0.4.21"
 nolock = { version = "0.4.1", features = ["async"] }
