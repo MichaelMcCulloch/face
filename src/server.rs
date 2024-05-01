@@ -10,7 +10,7 @@ use crate::api::ApiDoc;
 use crate::engine::IndexEngine;
 
 pub(crate) fn run_server<S: AsRef<str>>(
-    engine: IndexEngine,
+    engine: IndexEngine<384>,
     host: S,
     port: u16,
 ) -> Result<Server, std::io::Error> {

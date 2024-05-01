@@ -36,9 +36,13 @@ pub(crate) struct ApiDoc;
 #[post("/query")]
 async fn query(
     Json(Query { embedding, count }): Json<Query>,
-    index: Data<Arc<IndexEngine>>,
+    index: Data<Arc<IndexEngine<384>>>,
 ) -> impl Responder {
-    match index.query(embedding, count).await {
+    let mut embed = [0.0f32; 384];
+
+    embed.copy_from_slice(&embedding);
+    drop(embedding);
+    match index.query(embed, count).await {
         Ok(neighbors) => HttpResponse::Ok().json(Neighbors { neighbors }),
         Err(_e) => HttpResponse::InternalServerError().into(),
     }

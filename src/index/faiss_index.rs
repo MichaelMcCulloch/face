@@ -30,10 +30,10 @@ impl FaissIndex {
     }
 }
 
-impl SearchService for FaissIndex {
+impl<const N: usize> SearchService<N> for FaissIndex {
     type E = IndexSearchError;
 
-    fn search(&mut self, query: &[f32], neighbors: usize) -> Result<Vec<i64>, Self::E> {
+    fn search(&mut self, query: &[f32; N], neighbors: usize) -> Result<Vec<i64>, Self::E> {
         let start = Instant::now();
         let rs = self.index.search(query, neighbors)?;
         let indices: Vec<i64> = rs.labels.iter().map(|i| i.to_native()).collect();
