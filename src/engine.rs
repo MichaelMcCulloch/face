@@ -1,9 +1,13 @@
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use std::time::Instant;
 
 use actix_web::rt;
-use tokio::sync::mpsc::error::SendError;
-use tokio::sync::{mpsc::channel, Mutex};
+use tokio::sync::oneshot::Receiver as OneShotReceiver;
+use tokio::sync::{
+    mpsc::{channel, error::SendError},
+    Mutex,
+};
 
 use crate::index::FaissIndex;
 
@@ -48,19 +52,28 @@ impl Display for IndexEngineError {
 }
 
 impl<const N: usize> IndexEngine<N> {
-    pub(crate) async fn new(index: FaissIndex) -> Self {
+    pub(crate) async fn new(
+        index: FaissIndex,
+        signal_exit: Arc<Mutex<OneShotReceiver<()>>>,
+    ) -> Self {
         let mutex = Mutex::new(index);
+
         let parallelism_does_not_kill_machine =
             std::thread::available_parallelism().unwrap().get() / 2;
+
         let (mut rx, tx) = jiffy::async_queue::<IndexArguments<N>>();
         rt::spawn(async move {
             loop {
-                let mut batch_buckets = (0..32).map(|_| vec![]).collect::<Vec<_>>();
-                let mut count = 0usize;
+                if let Ok(()) = signal_exit.lock().await.try_recv() {
+                    break;
+                }
+
+                let mut batch_buckets = (0..17).map(|_| vec![]).collect::<Vec<_>>();
+                let mut batch_request_count = 0usize;
                 while let Ok(arguments) = rx.try_dequeue() {
                     batch_buckets[arguments.neighbors].push(arguments);
-                    count += 1;
-                    if count >= parallelism_does_not_kill_machine {
+                    batch_request_count += 1;
+                    if batch_request_count >= parallelism_does_not_kill_machine {
                         break;
                     }
                 }
@@ -70,7 +83,7 @@ impl<const N: usize> IndexEngine<N> {
                     .enumerate()
                     .filter(|(_, b)| !b.is_empty())
                 {
-                    let start = Instant::now();
+                    let _start = Instant::now();
                     let neighbors = {
                         let batch = &arguments_set
                             .iter()
@@ -83,7 +96,6 @@ impl<const N: usize> IndexEngine<N> {
                             .search_batch(batch, neighbors)
                             .map_err(IndexEngineError::IndexSearchError)?
                     };
-                    log::info!("{}", start.elapsed().as_millis());
 
                     for neighbor_set in neighbors {
                         let arguments = arguments_set.remove(0);

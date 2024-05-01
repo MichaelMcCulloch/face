@@ -1,9 +1,13 @@
-use std::path::PathBuf;
 
+use std::{path::PathBuf, sync::Arc};
+
+use actix_rt::signal;
 use actix_web::rt;
 use clap::Parser;
 use engine::IndexEngine;
+
 use server::run_server;
+use tokio::sync::{oneshot, Mutex};
 
 mod api;
 mod engine;
@@ -30,8 +34,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let system_runner = rt::System::new();
 
+    let (_sender, receiver): (oneshot::Sender<()>, oneshot::Receiver<()>) =
+        oneshot::channel::<()>();
+
+    let receiver = Arc::new(Mutex::new(receiver));
     let exec = async {
-        let index_engine = IndexEngine::new(faiss_index).await;
+        rt::spawn(async move {
+            signal::ctrl_c()
+                .await
+                .expect("Failed to listen for exit signal");
+            let _ = _sender.send(());
+        });
+
+        let index_engine = IndexEngine::new(faiss_index, receiver).await;
         let _ = run_server(index_engine, args.host, args.port)
             .unwrap()
             .await;
