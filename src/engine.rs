@@ -50,23 +50,50 @@ impl Display for IndexEngineError {
 impl<const N: usize> IndexEngine<N> {
     pub(crate) async fn new(index: FaissIndex) -> Self {
         let mutex = Mutex::new(index);
-
+        let parallelism_does_not_kill_machine =
+            std::thread::available_parallelism().unwrap().get() / 2;
         let (mut rx, tx) = jiffy::async_queue::<IndexArguments<N>>();
         rt::spawn(async move {
-            while let Ok(arguments) = rx.dequeue().await {
-                let faiss_index = &mut mutex.lock().await;
+            loop {
+                let mut batch_buckets = (0..32).map(|_| vec![]).collect::<Vec<_>>();
+                let mut count = 0usize;
+                while let Ok(arguments) = rx.try_dequeue() {
+                    batch_buckets[arguments.neighbors].push(arguments);
+                    count += 1;
+                    if count >= parallelism_does_not_kill_machine {
+                        break;
+                    }
+                }
 
-                let start = Instant::now();
-                let neighbors = faiss_index
-                    .search(&arguments.embedding, arguments.neighbors)
-                    .map_err(IndexEngineError::IndexSearchError)?;
-                log::info!("{}", start.elapsed().as_millis());
+                for (neighbors, mut arguments_set) in batch_buckets
+                    .into_iter()
+                    .enumerate()
+                    .filter(|(_, b)| !b.is_empty())
+                {
+                    let start = Instant::now();
+                    let neighbors = {
+                        let batch = &arguments_set
+                            .iter()
+                            .map(|args| args.embedding)
+                            .collect::<Vec<_>>();
+                        let batch = batch.as_slice();
+                        let faiss_index = &mut mutex.lock().await;
 
-                arguments
-                    .sender
-                    .send(neighbors)
-                    .await
-                    .map_err(IndexEngineError::SendError)?
+                        faiss_index
+                            .search_batch(batch, neighbors)
+                            .map_err(IndexEngineError::IndexSearchError)?
+                    };
+                    log::info!("{}", start.elapsed().as_millis());
+
+                    for neighbor_set in neighbors {
+                        let arguments = arguments_set.remove(0);
+                        arguments
+                            .sender
+                            .send(neighbor_set)
+                            .await
+                            .map_err(IndexEngineError::SendError)?;
+                    }
+                }
             }
             Ok::<(), IndexEngineError>(())
         });
