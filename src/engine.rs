@@ -1,24 +1,19 @@
-use std::fmt::{Display, Formatter};
-use std::sync::Arc;
-use std::time::Instant;
-
+use crate::index::{FaissIndex, IndexSearchError, SearchService};
 use actix_web::rt;
-use tokio::sync::oneshot::Receiver as OneShotReceiver;
-use tokio::sync::{
-    mpsc::{channel, error::SendError},
-    Mutex,
-};
-
-use crate::index::FaissIndex;
-
-use crate::index::IndexSearchError;
-use crate::index::SearchService;
-
 use nolock::queues::{
     mpsc::jiffy::{self, AsyncSender},
     EnqueueError,
 };
-use tokio::sync::mpsc::Sender;
+use std::{
+    collections::HashMap,
+    fmt::{Display, Formatter},
+    sync::Arc,
+};
+use tokio::sync::{
+    mpsc::{channel, error::SendError, Sender},
+    oneshot::Receiver as OneShotReceiver,
+    Mutex,
+};
 
 struct IndexArguments<const N: usize> {
     embedding: [f32; N],
@@ -68,10 +63,14 @@ impl<const N: usize> IndexEngine<N> {
                     break;
                 }
 
-                let mut batch_buckets = (0..17).map(|_| vec![]).collect::<Vec<_>>();
+                let mut batch_buckets = HashMap::new();
                 let mut batch_request_count = 0usize;
                 while let Ok(arguments) = rx.try_dequeue() {
-                    batch_buckets[arguments.neighbors].push(arguments);
+                    batch_buckets
+                        .entry(arguments.neighbors)
+                        .or_insert(vec![])
+                        .push(arguments);
+
                     batch_request_count += 1;
                     if batch_request_count >= parallelism_does_not_kill_machine {
                         break;
@@ -80,10 +79,8 @@ impl<const N: usize> IndexEngine<N> {
 
                 for (neighbors, mut arguments_set) in batch_buckets
                     .into_iter()
-                    .enumerate()
-                    .filter(|(_, b)| !b.is_empty())
+                    .filter(|(_, requests)| !requests.is_empty())
                 {
-                    let _start = Instant::now();
                     let neighbors = {
                         let batch = &arguments_set
                             .iter()
