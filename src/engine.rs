@@ -50,11 +50,9 @@ impl<const N: usize> IndexEngine<N> {
     pub(crate) async fn new(
         index: FaissIndex,
         signal_exit: Arc<Mutex<OneShotReceiver<()>>>,
+        max_parallelism: u16,
     ) -> Self {
         let mutex = Mutex::new(index);
-
-        let parallelism_does_not_kill_machine =
-            std::thread::available_parallelism().unwrap().get() / 2;
 
         let (mut rx, tx) = jiffy::async_queue::<IndexArguments<N>>();
         rt::spawn(async move {
@@ -64,7 +62,7 @@ impl<const N: usize> IndexEngine<N> {
                 }
 
                 let mut batch_buckets = HashMap::new();
-                let mut batch_request_count = 0usize;
+                let mut batch_request_count = 0u16;
                 while let Ok(arguments) = rx.try_dequeue() {
                     batch_buckets
                         .entry(arguments.neighbors)
@@ -72,7 +70,7 @@ impl<const N: usize> IndexEngine<N> {
                         .push(arguments);
 
                     batch_request_count += 1;
-                    if batch_request_count >= parallelism_does_not_kill_machine {
+                    if batch_request_count >= max_parallelism {
                         break;
                     }
                 }

@@ -1,4 +1,3 @@
-
 use std::{path::PathBuf, sync::Arc};
 
 use actix_rt::signal;
@@ -23,6 +22,8 @@ struct Args {
     pub(crate) host: String,
     #[arg(long, default_value_t = 6947)]
     pub(crate) port: u16,
+    #[arg(long, default_value_t = 16)]
+    pub(crate) max_parallelism: u16,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,8 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let system_runner = rt::System::new();
 
-    let (_sender, receiver): (oneshot::Sender<()>, oneshot::Receiver<()>) =
-        oneshot::channel::<()>();
+    let (sender, receiver): (oneshot::Sender<()>, oneshot::Receiver<()>) = oneshot::channel::<()>();
 
     let receiver = Arc::new(Mutex::new(receiver));
     let exec = async {
@@ -43,10 +43,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             signal::ctrl_c()
                 .await
                 .expect("Failed to listen for exit signal");
-            let _ = _sender.send(());
+            let _ = sender.send(());
         });
 
-        let index_engine = IndexEngine::new(faiss_index, receiver).await;
+        let index_engine = IndexEngine::new(faiss_index, receiver, args.max_parallelism).await;
         let _ = run_server(index_engine, args.host, args.port)
             .unwrap()
             .await;
