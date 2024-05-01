@@ -8,8 +8,7 @@ use std::{
 #[derive(Debug)]
 pub enum IndexError {
     FileNotFound,
-    IndexReadError(FsError),
-    IndexFormatError(FsError),
+    IndexError(FsError),
 }
 
 #[derive(Debug)]
@@ -24,10 +23,7 @@ impl Display for IndexError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             IndexError::FileNotFound => write!(f, "SearchService: Index not found"),
-            IndexError::IndexReadError(err) => {
-                write!(f, "SearchService: {}", err)
-            }
-            IndexError::IndexFormatError(err) => {
+            IndexError::IndexError(err) => {
                 write!(f, "SearchService: {}", err)
             }
         }
@@ -41,5 +37,16 @@ impl Display for IndexSearchError {
                 write!(f, "SearchService: {}", err)
             }
         }
+    }
+}
+
+impl From<FsError> for IndexError {
+    fn from(value: FsError) -> Self {
+        Self::IndexError(value)
+    }
+}
+impl From<FsError> for IndexSearchError {
+    fn from(value: FsError) -> Self {
+        Self::IndexSearchError(value)
     }
 }

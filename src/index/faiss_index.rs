@@ -22,10 +22,8 @@ impl FaissIndex {
             return Err(IndexError::FileNotFound);
         }
 
-        let index = faiss::read_index(index_path.to_str().expect("Index path is not a string"))
-            .map_err(IndexError::IndexReadError)?
-            .into_pre_transform()
-            .map_err(IndexError::IndexFormatError)?;
+        let index = faiss::read_index(index_path.to_str().expect("Index path is not a string"))?
+            .into_pre_transform()?;
 
         log::info!("Load Index {:?}", start.elapsed());
         Ok(FaissIndex { index })
@@ -37,10 +35,7 @@ impl SearchService for FaissIndex {
 
     fn search(&mut self, query: &[f32], neighbors: usize) -> Result<Vec<i64>, Self::E> {
         let start = Instant::now();
-        let rs = self
-            .index
-            .search(query, neighbors)
-            .map_err(IndexSearchError::IndexSearchError)?;
+        let rs = self.index.search(query, neighbors)?;
         let indices: Vec<i64> = rs.labels.iter().map(|i| i.to_native()).collect();
         log::debug!("Index {:?}", start.elapsed());
         Ok(indices)

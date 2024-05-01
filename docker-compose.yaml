@@ -19,7 +19,7 @@ x-base_service_index: &base_index
   ports:
     - "6947:6947"
   volumes:
-    - /home/michael/Documents/WIKIDUMPS/20240220/index/thenlper/gte-small:/db
+    - /home/michael/Documents/WIKIDUMPS/20240420/index/thenlper/gte-small:/db
 
 services:
   index:
